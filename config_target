@@ -1,2 +1,84 @@
 #!/bin/bash
-echo "Hello"
+#Declaration of States
+BEFORE_SCRAPE=0
+DURING_SCRAPE=1
+DURING_JOB=2
+STATE=$BEFORE_SCRAPE
+OPTION=""
+PROM_DIR=""
+IP1=""
+IP2=""
+JOB_NAME=""
+HELP_MSG="use --help option to get a guide on how to use config_target"
+TARGET=""
+
+#Helper functions 
+help() {
+ echo "This will print the manual"
+}
+
+
+	
+
+
+
+#######MAIN#######
+
+if [ $# -eq 0 ]; then
+	echo "No arguments passed, "$HELP_MSG
+elif [ $# -gt 0 ]; then
+	OPTION="$1"
+	if [ $1 = "--help" ]; then
+		help
+		exit
+	elif [ $1 = "-a" ]; then
+		if [ ! -f "$2" ]; then
+			echo "Enter a prometheus.yml file that exists"
+			exit
+		fi
+		if [[ ! $3 =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+			echo "Enter a valid ip address"
+			exit
+		fi
+		PROM_DIR="$2"
+		IP1="$3"
+		TARGET="- targets: ['$IP1:9100','$IP1:7676','$IP1:9256','$IP1:9399','$IP1:9104'"
+		if [ $# -eq 4 ] && [[ $4 =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+			IP2="$4"
+			TARGET=$TARGET",'$IP2:9100','$IP2:9256','$IP2:7676','$IP2:9399','$IP2:9104']"
+		else
+			TARGET=$TARGET"]"
+		fi
+		JOB_NAME="ems_$IP1"
+	elif [ $1 = "-rm" ]; then
+		if [ ! -f "$2" ]; then
+			echo "Enter a prometheus.yml file that exists"
+			exit
+		fi
+		PROM_DIR="$2"
+		JOB_NAME="$3"
+	elif [ $1 = "-l" ]; then
+		if [ ! -f "$2" ]; then
+			echo "Enter a prometheus.yml file that exists"
+			exit
+		fi
+		PROM_DIR="$2"
+	else
+		echo "Wrong arguemnt passed, "$HELP_MSG
+		exit
+	fi
+fi
+
+
+###Everything is valid, go ahead###	 
+
+
+echo $OPTION
+echo $PROM_DIR
+echo $IP1
+echo $IP2
+echo $JOB_NAME
+echo $TARGET
+
+
+  
