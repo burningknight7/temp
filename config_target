@@ -2,7 +2,7 @@
 #Declaration of States
 BEFORE_SCRAPE=0
 DURING_SCRAPE=1
-DURING_JOB=2
+DURING_TARGET=2
 STATE=$BEFORE_SCRAPE
 OPTION=""
 PROM_DIR=""
@@ -120,7 +120,26 @@ elif [ $STATE -eq $DURING_SCRAPE ]; then
 		exit
 	elif [ "$OPTION" = "-l" ]; then
 		#####TODO#####	
-		exit
+		if [[ $line == *"job_name"* ]]; then
+			echo $line
+		elif [[ $line == *"targets"* ]]; then
+			echo $line
+			if [[ ! $line == *"]"* ]]; then	
+				STATE=$DURING_TARGET
+			else
+				echo ""
+			fi
+		fi
+	fi
+elif [ $STATE -eq $DURING_TARGET ]; then
+	if [ $OPTION = "-l" ]; then
+		if [[ $line == *"]"* ]]; then
+			echo $line
+			echo ""
+			STATE=$DURING_SCRAPE
+		else 
+			echo $line
+		fi
 	fi
 fi
 
