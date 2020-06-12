@@ -11,6 +11,11 @@ IP2=""
 JOB_NAME=""
 HELP_MSG="use --help option to get a guide on how to use config_target"
 TARGET=""
+STATE=$BEFORE_SCRAPE
+CONTENT=""
+JOB_CONTENT=""
+JOB_SPACES=""
+LIST=""
 
 #Helper functions 
 help() {
@@ -73,12 +78,55 @@ fi
 ###Everything is valid, go ahead###	 
 
 
-echo $OPTION
-echo $PROM_DIR
-echo $IP1
-echo $IP2
-echo $JOB_NAME
-echo $TARGET
+#echo $OPTION
+#echo $PROM_DIR
+#echo $IP1
+#echo $IP2
+#echo $JOB_NAME
+#echo $TARGET
+
+while IFS= read -r line
+do
+
+if [ $STATE -eq $BEFORE_SCRAPE ]; then
+	if [[ $line == *"scrape_configs:"* ]]; then
+		STATE=$DURING_SCRAPE
+	fi
+	CONTENT=$CONTENT$line"\n"
+elif [ $STATE -eq $DURING_SCRAPE ]; then
+	if [ "$OPTION" = "-a" ]; then
+		if [[ $line == *"-"* ]]; then
+			#JOB_SPACES=`echo $line| awk -F- '{print $1}'`
+			NUM_SPACES=`expr index "$line" "-"`
+			NUM_SPACES=$((NUM_SPACES - 1))
+			echo $NUM_SPACES
+			for i in $( seq 1 $NUM_SPACES)
+			do
+				echo "$i"
+				JOB_SPACES=$JOB_SPACES" "
+			done
+			echo "s"$JOB_SPACES"Here they are"
+			CONTENT=$CONTENT$JOB_SPACES"- job_name: '$JOB_NAME'\n\n"
+			CONTENT=$CONTENT$JOB_SPACES"  metrics_path: '/metrics'\n\n"
+			CONTENT=$CONTENT$JOB_SPACES"  static_configs:\n"
+			CONTENT=$CONTENT$JOB_SPACES"  "$TARGET"\n\n"$line"\n"  
+			STATE=$BEFORE_SCRAPE
+		else
+			CONTENT=$CONTENT$line"\n"
+		fi
+	elif [ "$OPTION" = "-rm" ]; then
+		##We'll figure something ou##
+		exit
+	elif [ "$OPTION" = "-l" ]; then
+		#####TODO#####	
+		exit
+	fi
+fi
 
 
-  
+done < "$PROM_DIR"
+
+
+if [ "$OPTION" = "-a" ]; then
+	printf "$CONTENT" > "$PROM_DIR"
+fi  
