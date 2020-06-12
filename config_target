@@ -16,6 +16,7 @@ CONTENT=""
 JOB_CONTENT=""
 JOB_SPACES=""
 LIST=""
+#IFS='%'
 
 #Helper functions 
 help() {
@@ -95,7 +96,7 @@ if [ $STATE -eq $BEFORE_SCRAPE ]; then
 	CONTENT=$CONTENT$line"\n"
 elif [ $STATE -eq $DURING_SCRAPE ]; then
 	if [ "$OPTION" = "-a" ]; then
-		if [[ $line == *"-"* ]]; then
+		if [[ $line =~ ^[[:space:]]+-[[:space:]]+[a-zA-Z0-9_]+:[[:space:]]*[\'\"].*[\'\"].*$ ]]; then
 			#JOB_SPACES=`echo $line| awk -F- '{print $1}'`
 			NUM_SPACES=`expr index "$line" "-"`
 			NUM_SPACES=$((NUM_SPACES - 1))
@@ -129,4 +130,6 @@ done < "$PROM_DIR"
 
 if [ "$OPTION" = "-a" ]; then
 	printf "$CONTENT" > "$PROM_DIR"
-fi  
+fi 
+
+#unset IFS 
