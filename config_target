@@ -21,7 +21,6 @@ JOB_CONTENT=""
 JOB_SPACES=""
 NUM_SPACES=0
 LIST=""
-#IFS='%'
 
 #Helper functions 
 help() {
@@ -74,18 +73,7 @@ elif [ $# -gt 0 ]; then
 		echo "Wrong arguemnt passed, "$HELP_MSG
 		exit
 	fi
-fi
-
-
-###Everything is valid, go ahead###	 
-
-
-#echo $OPTION
-#echo $PROM_DIR
-#echo $IP1
-#echo $IP2
-#echo $JOB_NAME
-#echo $TARGET
+fi	 
 
 while IFS= read -r line
 do
@@ -116,15 +104,12 @@ elif [ $STATE -eq $DURING_SCRAPE ]; then
 			CONTENT=$CONTENT$line"\n"
 		fi
 	elif [ "$OPTION" = "-rm" ]; then
-		# if [[ $line =~ ^[[:space:]]+-[[:space:]]+[a-zA-Z0-9_]+:[[:space:]]*[\'\"].*[\'\"].*$ ]]; then
 		if [[ $line =~ ^[[:space:]]+-[[:space:]]+[a-zA-Z0-9_]+:.*$ ]]; then
 			if [[ $line == *"job_name"* ]] && [[ $line == *"$JOB_NAME"* ]]; then
 				IS_REMOVED=$TRUE
 			fi
-			echo "$line"
 			NUM_SPACES=`expr index "$line" "-"`
 			NUM_SPACES=$((NUM_SPACES - 1))
-			echo "$NUM_SPACES"
 			STATE=$DURING_JOB
 			JOB_CONTENT=$JOB_CONTENT$line"\n"
 		else
@@ -166,9 +151,6 @@ elif [ $STATE -eq $DURING_JOB ]; then
 		
 		else
 			if [[ $line =~ ^[[:space:]]{$NUM_SPACES}-.*$  ]]; then
-				echo "last job was"
-				echo "$JOB_CONTENT"
-				echo "was removed ? $IS_REMOVED"
 				if [ $IS_REMOVED -eq $FALSE ]; then
 					CONTENT=$CONTENT$JOB_CONTENT
 				fi
@@ -178,7 +160,6 @@ elif [ $STATE -eq $DURING_JOB ]; then
 				fi
 				JOB_CONTENT=$line"\n"
 			elif [[ $line =~ ^[[:space:]]+job_name:[[:space:]]+[\'\"]$JOB_NAME[\'\"].*$ ]]; then
-				echo " I am getting here"
 				IS_REMOVED=$TRUE
 				JOB_CONTENT=$JOB_CONTENT$line"\n"
 			else 
@@ -202,5 +183,3 @@ fi
 if [ "$OPTION" = "-a" ] || [ "$OPTION" = "-rm" ]; then
 	printf "$CONTENT" > "$PROM_DIR"
 fi 
-
-#unset IFS 
