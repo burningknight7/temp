@@ -1,8 +1,12 @@
 #!/bin/bash
 #Declaration of States
+TRUE=1
+FALSE=0
+IS_REMOVED=$FALSE
 BEFORE_SCRAPE=0
 DURING_SCRAPE=1
 DURING_TARGET=2
+DURING_JOB=3
 STATE=$BEFORE_SCRAPE
 OPTION=""
 PROM_DIR=""
@@ -15,6 +19,7 @@ STATE=$BEFORE_SCRAPE
 CONTENT=""
 JOB_CONTENT=""
 JOB_SPACES=""
+NUM_SPACES=0
 LIST=""
 #IFS='%'
 
@@ -23,15 +28,11 @@ help() {
  echo "This will print the manual"
 }
 
-
-	
-
-
-
 #######MAIN#######
 
 if [ $# -eq 0 ]; then
 	echo "No arguments passed, "$HELP_MSG
+	exit
 elif [ $# -gt 0 ]; then
 	OPTION="$1"
 	if [ $1 = "--help" ]; then
@@ -96,17 +97,16 @@ if [ $STATE -eq $BEFORE_SCRAPE ]; then
 	CONTENT=$CONTENT$line"\n"
 elif [ $STATE -eq $DURING_SCRAPE ]; then
 	if [ "$OPTION" = "-a" ]; then
-		if [[ $line =~ ^[[:space:]]+-[[:space:]]+[a-zA-Z0-9_]+:[[:space:]]*[\'\"].*[\'\"].*$ ]]; then
-			#JOB_SPACES=`echo $line| awk -F- '{print $1}'`
+		if [[ $line =~ ^[[:space:]]+-[[:space:]]+[a-zA-Z0-9_]+:.*$ ]]; then
 			NUM_SPACES=`expr index "$line" "-"`
 			NUM_SPACES=$((NUM_SPACES - 1))
-			echo $NUM_SPACES
+			
 			for i in $( seq 1 $NUM_SPACES)
 			do
-				echo "$i"
+				
 				JOB_SPACES=$JOB_SPACES" "
 			done
-			echo "s"$JOB_SPACES"Here they are"
+			
 			CONTENT=$CONTENT$JOB_SPACES"- job_name: '$JOB_NAME'\n\n"
 			CONTENT=$CONTENT$JOB_SPACES"  metrics_path: '/metrics'\n\n"
 			CONTENT=$CONTENT$JOB_SPACES"  static_configs:\n"
@@ -116,13 +116,24 @@ elif [ $STATE -eq $DURING_SCRAPE ]; then
 			CONTENT=$CONTENT$line"\n"
 		fi
 	elif [ "$OPTION" = "-rm" ]; then
-		##We'll figure something ou##
-		exit
+		# if [[ $line =~ ^[[:space:]]+-[[:space:]]+[a-zA-Z0-9_]+:[[:space:]]*[\'\"].*[\'\"].*$ ]]; then
+		if [[ $line =~ ^[[:space:]]+-[[:space:]]+[a-zA-Z0-9_]+:.*$ ]]; then
+			if [[ $line == *"job_name"* ]] && [[ $line == *"$JOB_NAME"* ]]; then
+				IS_REMOVED=$TRUE
+			fi
+			echo "$line"
+			NUM_SPACES=`expr index "$line" "-"`
+			NUM_SPACES=$((NUM_SPACES - 1))
+			echo "$NUM_SPACES"
+			STATE=$DURING_JOB
+			JOB_CONTENT=$JOB_CONTENT$line"\n"
+		else
+			CONTENT=$CONTENT$line"\n"
+		fi
 	elif [ "$OPTION" = "-l" ]; then
-		#####TODO#####	
-		if [[ $line == *"job_name"* ]]; then
+		if [[ $line =~ ^[[:space:]-]+job_name:[[:space:]]+[\'\"].*[\'\"].*$ ]]; then	
 			echo $line
-		elif [[ $line == *"targets"* ]]; then
+		elif [[ $line =~ ^[[:space:]-]+targets:.*$ ]]; then
 			echo $line
 			if [[ ! $line == *"]"* ]]; then	
 				STATE=$DURING_TARGET
@@ -141,13 +152,54 @@ elif [ $STATE -eq $DURING_TARGET ]; then
 			echo $line
 		fi
 	fi
-fi
 
+elif [ $STATE -eq $DURING_JOB ]; then
+	if [ $OPTION = "-rm" ]; then
+		LESS_SPACES=$(($NUM_SPACES - 1))
+		if [[ $line =~ ^[[:space:]]{0,$LESS_SPACES}[a-zA-Z0-9_-]+:.* ]]; then
+			if [ $IS_REMOVED -eq $FALSE ]; then
+				CONTENT=$CONTENT$JOB_CONTENT$line"\n"
+			else
+				CONTENT=$CONTENT$line"\n"
+			fi
+			STATE=$BEFORE_SCRAPE
+		
+		else
+			if [[ $line =~ ^[[:space:]]{$NUM_SPACES}-.*$  ]]; then
+				echo "last job was"
+				echo "$JOB_CONTENT"
+				echo "was removed ? $IS_REMOVED"
+				if [ $IS_REMOVED -eq $FALSE ]; then
+					CONTENT=$CONTENT$JOB_CONTENT
+				fi
+				IS_REMOVED=$FALSE
+				if [[ $line == *"job_name:"* ]] && [[ $line == *"$JOB_NAME"* ]]; then
+					IS_REMOVED=$TRUE
+				fi
+				JOB_CONTENT=$line"\n"
+			elif [[ $line =~ ^[[:space:]]+job_name:[[:space:]]+[\'\"]$JOB_NAME[\'\"].*$ ]]; then
+				echo " I am getting here"
+				IS_REMOVED=$TRUE
+				JOB_CONTENT=$JOB_CONTENT$line"\n"
+			else 
+				JOB_CONTENT=$JOB_CONTENT$line"\n"
+			fi
+		fi
+	fi
+			
+fi
 
 done < "$PROM_DIR"
 
+if [ $STATE -eq $DURING_JOB ]; then
+	if [ "$OPTION" = "-rm" ]; then
+		if [ $IS_REMOVED -eq $FALSE ]; then
+			CONTENT=$CONTENT$JOB_CONTENT
+		fi
+	fi
+fi
 
-if [ "$OPTION" = "-a" ]; then
+if [ "$OPTION" = "-a" ] || [ "$OPTION" = "-rm" ]; then
 	printf "$CONTENT" > "$PROM_DIR"
 fi 
 
