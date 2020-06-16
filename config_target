@@ -24,7 +24,9 @@ LIST=""
 
 #Helper functions 
 help() {
- echo "This will print the manual"
+ echo ""
+ echo ""
+ curl https://raw.githubusercontent.com/burningknight7/temp/master/config_target_man.txt
 }
 
 #######MAIN#######
