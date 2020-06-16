@@ -1,0 +1,17 @@
+Command : config_target OPTION [VALUES] 
+Description: Adds the required targets to the Prometheus.yml config file
+OPTIONS :
+-a yml_location ip1 [ip2]
+Appends a new target with the IP address of ip1 to the prometheus.yml file located at the directory ‘yml_location’. For HA provide two IP addresses of master and slave respectively.
+
+-rm yml_location job_name
+Removes the node with the given job_name from prometheus.yml at the ‘yml_location’ file.
+
+-l yml_location
+List out the targets that already exist from the given prometheus.yml file.
+
+--help
+Prints out this manual. 
+
+
+
