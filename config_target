@@ -102,6 +102,7 @@ elif [ $STATE -eq $DURING_SCRAPE ]; then
 			CONTENT=$CONTENT$JOB_SPACES"  static_configs:\n"
 			CONTENT=$CONTENT$JOB_SPACES"  "$TARGET"\n\n"$line"\n"  
 			STATE=$BEFORE_SCRAPE
+			echo "Added the Target Successfully"
 		else
 			CONTENT=$CONTENT$line"\n"
 		fi
@@ -109,6 +110,7 @@ elif [ $STATE -eq $DURING_SCRAPE ]; then
 		if [[ $line =~ ^[[:space:]]+-[[:space:]]+[a-zA-Z0-9_]+:.*$ ]]; then
 			if [[ $line == *"job_name"* ]] && [[ $line == *"$JOB_NAME"* ]]; then
 				IS_REMOVED=$TRUE
+				echo "Removed Target Successfully"
 			fi
 			NUM_SPACES=`expr index "$line" "-"`
 			NUM_SPACES=$((NUM_SPACES - 1))
@@ -159,10 +161,12 @@ elif [ $STATE -eq $DURING_JOB ]; then
 				IS_REMOVED=$FALSE
 				if [[ $line == *"job_name:"* ]] && [[ $line == *"$JOB_NAME"* ]]; then
 					IS_REMOVED=$TRUE
+					echo "Removed Target Successfully"
 				fi
 				JOB_CONTENT=$line"\n"
 			elif [[ $line =~ ^[[:space:]]+job_name:[[:space:]]+[\'\"]$JOB_NAME[\'\"].*$ ]]; then
 				IS_REMOVED=$TRUE
+				echo "Removed Target Successfully"
 				JOB_CONTENT=$JOB_CONTENT$line"\n"
 			else 
 				JOB_CONTENT=$JOB_CONTENT$line"\n"
