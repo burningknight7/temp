@@ -3,6 +3,7 @@
 TRUE=1
 FALSE=0
 IS_REMOVED=$FALSE
+IS_ADDED=$FALSE
 BEFORE_SCRAPE=0
 DURING_SCRAPE=1
 DURING_TARGET=2
@@ -27,6 +28,15 @@ help() {
  echo ""
  echo ""
  curl https://raw.githubusercontent.com/burningknight7/temp/master/config_target_man.txt
+}
+
+write_job_content(){
+
+ JOB_CONTENT=$JOB_CONTENT$JOB_SPACES"- job_name: '$JOB_NAME'\n\n"
+ JOB_CONTENT=$JOB_CONTENT$JOB_SPACES"  metrics_path: '/metrics'\n\n"
+ JOB_CONTENT=$JOB_CONTENT$JOB_SPACES"  static_configs:\n"
+ JOB_CONTENT=$JOB_CONTENTJOB_SPACES"  "$TARGET"\n\n"
+
 }
 
 #######MAIN#######
@@ -82,6 +92,17 @@ do
 
 if [ $STATE -eq $BEFORE_SCRAPE ]; then
 	if [[ $line == *"scrape_configs:"* ]]; then
+		NUM_SPACES=`expr index "$line" "s"`
+		if [ $NUM_SPACES -lt 2 ]; then
+			NUM_SPACES=3
+		fi
+		NUM_SPACES=$((NUM_SPACES - 1))
+		LESS_SPACES=$((NUM_SPACES - 1))
+		JOB_SPACES=""
+		for i in $( seq 1 $NUM_SPACES)
+		do
+			JOB_SPACES=$JOB_SPACES" "
+		done
 		STATE=$DURING_SCRAPE
 	fi
 	CONTENT=$CONTENT$line"\n"
@@ -90,19 +111,30 @@ elif [ $STATE -eq $DURING_SCRAPE ]; then
 		if [[ $line =~ ^[[:space:]]+-[[:space:]]+[a-zA-Z0-9_]+:.*$ ]]; then
 			NUM_SPACES=`expr index "$line" "-"`
 			NUM_SPACES=$((NUM_SPACES - 1))
-			
+			JOB_SPACES=""
 			for i in $( seq 1 $NUM_SPACES)
 			do
-				
 				JOB_SPACES=$JOB_SPACES" "
 			done
-			
-			CONTENT=$CONTENT$JOB_SPACES"- job_name: '$JOB_NAME'\n\n"
-			CONTENT=$CONTENT$JOB_SPACES"  metrics_path: '/metrics'\n\n"
-			CONTENT=$CONTENT$JOB_SPACES"  static_configs:\n"
-			CONTENT=$CONTENT$JOB_SPACES"  "$TARGET"\n\n"$line"\n"  
+		
+			JOB_CONTENT=""
+			write_job_content
+			CONTENT=$CONTENT$JOB_CONTENT$line"\n"			
+  
 			STATE=$BEFORE_SCRAPE
+			IS_ADDED=$TRUE
 			echo "Added the Target Successfully"
+		elif [[ $line =~ ^[[:space:]]{0,$LESS_SPACES}[a-zA-Z0-9_].*$ ]]; then
+			if [ $IS_ADDED -eq $FALSE ]; then
+				JOB_CONTENT=""
+				write_job_content
+				CONTENT=$CONTENT$JOB_CONTENT$line"\n"
+				IS_ADDED=$TRUE
+				echo "Added Target Successfully"
+				STATE=$BEFORE_SCRAPE
+			else
+				CONTENT=$CONTENT$line"\n"
+			fi
 		else
 			CONTENT=$CONTENT$line"\n"
 		fi
@@ -185,6 +217,9 @@ if [ $STATE -eq $DURING_JOB ]; then
 		fi
 	fi
 fi
+
+if [ $STATE -eq $DURING_SCRAPE ]; then
+	if ["$OPTION" = "-a" ];
 
 if [ "$OPTION" = "-a" ] || [ "$OPTION" = "-rm" ]; then
 	printf "$CONTENT" > "$PROM_DIR"
