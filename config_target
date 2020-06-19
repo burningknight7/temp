@@ -1,5 +1,9 @@
 #!/bin/bash
 #Declaration of States
+ADD_OPTION="-a"
+REMOVE_OPTION="-r"
+LIST_OPTION="-l"
+HELP_OPTION="-h"
 TRUE=1
 FALSE=0
 IS_REMOVED=$FALSE
@@ -14,7 +18,7 @@ PROM_DIR=""
 IP1=""
 IP2=""
 JOB_NAME=""
-HELP_MSG="use --help option to get a guide on how to use config_target"
+HELP_MSG="use $HELP_OPTION option to get a guide on how to use config_target"
 TARGET=""
 STATE=$BEFORE_SCRAPE
 CONTENT=""
@@ -35,7 +39,7 @@ write_job_content(){
  JOB_CONTENT=$JOB_CONTENT$JOB_SPACES"- job_name: '$JOB_NAME'\n\n"
  JOB_CONTENT=$JOB_CONTENT$JOB_SPACES"  metrics_path: '/metrics'\n\n"
  JOB_CONTENT=$JOB_CONTENT$JOB_SPACES"  static_configs:\n"
- JOB_CONTENT=$JOB_CONTENTJOB_SPACES"  "$TARGET"\n\n"
+ JOB_CONTENT=$JOB_CONTENT$JOB_SPACES"  $TARGET\n\n"
 
 }
 
@@ -46,10 +50,10 @@ if [ $# -eq 0 ]; then
 	exit
 elif [ $# -gt 0 ]; then
 	OPTION="$1"
-	if [ $1 = "--help" ]; then
+	if [ $1 = "$HELP_OPTION" ]; then
 		help
 		exit
-	elif [ $1 = "-a" ]; then
+	elif [ $1 = "$ADD_OPTION" ]; then
 		if [ ! -f "$2" ]; then
 			echo "Enter a prometheus.yml file that exists"
 			exit
@@ -68,14 +72,14 @@ elif [ $# -gt 0 ]; then
 			TARGET=$TARGET"]"
 		fi
 		JOB_NAME="ems_$IP1"
-	elif [ $1 = "-rm" ]; then
+	elif [ $1 = "$REMOVE_OPTION" ]; then
 		if [ ! -f "$2" ]; then
 			echo "Enter a prometheus.yml file that exists"
 			exit
 		fi
 		PROM_DIR="$2"
 		JOB_NAME="$3"
-	elif [ $1 = "-l" ]; then
+	elif [ $1 = "$LIST_OPTION" ]; then
 		if [ ! -f "$2" ]; then
 			echo "Enter a prometheus.yml file that exists"
 			exit
@@ -97,7 +101,6 @@ if [ $STATE -eq $BEFORE_SCRAPE ]; then
 			NUM_SPACES=3
 		fi
 		NUM_SPACES=$((NUM_SPACES - 1))
-		LESS_SPACES=$((NUM_SPACES - 1))
 		JOB_SPACES=""
 		for i in $( seq 1 $NUM_SPACES)
 		do
@@ -107,7 +110,7 @@ if [ $STATE -eq $BEFORE_SCRAPE ]; then
 	fi
 	CONTENT=$CONTENT$line"\n"
 elif [ $STATE -eq $DURING_SCRAPE ]; then
-	if [ "$OPTION" = "-a" ]; then
+	if [ "$OPTION" = "$ADD_OPTION" ]; then
 		if [[ $line =~ ^[[:space:]]+-[[:space:]]+[a-zA-Z0-9_]+:.*$ ]]; then
 			NUM_SPACES=`expr index "$line" "-"`
 			NUM_SPACES=$((NUM_SPACES - 1))
@@ -116,21 +119,22 @@ elif [ $STATE -eq $DURING_SCRAPE ]; then
 			do
 				JOB_SPACES=$JOB_SPACES" "
 			done
-		
 			JOB_CONTENT=""
 			write_job_content
 			CONTENT=$CONTENT$JOB_CONTENT$line"\n"			
-  
 			STATE=$BEFORE_SCRAPE
 			IS_ADDED=$TRUE
 			echo "Added the Target Successfully"
-		elif [[ $line =~ ^[[:space:]]{0,$LESS_SPACES}[a-zA-Z0-9_].*$ ]]; then
+			
+		elif [[ $line =~ ^[[:space:]]{0,$NUM_SPACES}[a-zA-Z0-9_].*$ ]]; then
 			if [ $IS_ADDED -eq $FALSE ]; then
 				JOB_CONTENT=""
+				JOB_SPACES=$JOB_SPACES"  "
 				write_job_content
 				CONTENT=$CONTENT$JOB_CONTENT$line"\n"
 				IS_ADDED=$TRUE
 				echo "Added Target Successfully"
+				
 				STATE=$BEFORE_SCRAPE
 			else
 				CONTENT=$CONTENT$line"\n"
@@ -138,7 +142,7 @@ elif [ $STATE -eq $DURING_SCRAPE ]; then
 		else
 			CONTENT=$CONTENT$line"\n"
 		fi
-	elif [ "$OPTION" = "-rm" ]; then
+	elif [ "$OPTION" = "$REMOVE_OPTION" ]; then
 		if [[ $line =~ ^[[:space:]]+-[[:space:]]+[a-zA-Z0-9_]+:.*$ ]]; then
 			if [[ $line == *"job_name"* ]] && [[ $line == *"$JOB_NAME"* ]]; then
 				IS_REMOVED=$TRUE
@@ -151,7 +155,7 @@ elif [ $STATE -eq $DURING_SCRAPE ]; then
 		else
 			CONTENT=$CONTENT$line"\n"
 		fi
-	elif [ "$OPTION" = "-l" ]; then
+	elif [ "$OPTION" = "$LIST_OPTION" ]; then
 		if [[ $line =~ ^[[:space:]-]+job_name:[[:space:]]+[\'\"].*[\'\"].*$ ]]; then	
 			echo $line
 		elif [[ $line =~ ^[[:space:]-]+targets:.*$ ]]; then
@@ -164,7 +168,7 @@ elif [ $STATE -eq $DURING_SCRAPE ]; then
 		fi
 	fi
 elif [ $STATE -eq $DURING_TARGET ]; then
-	if [ $OPTION = "-l" ]; then
+	if [ $OPTION = "$LIST_OPTION" ]; then
 		if [[ $line == *"]"* ]]; then
 			echo $line
 			echo ""
@@ -175,7 +179,7 @@ elif [ $STATE -eq $DURING_TARGET ]; then
 	fi
 
 elif [ $STATE -eq $DURING_JOB ]; then
-	if [ $OPTION = "-rm" ]; then
+	if [ $OPTION = "$REMOVE_OPTION" ]; then
 		LESS_SPACES=$(($NUM_SPACES - 1))
 		if [[ $line =~ ^[[:space:]]{0,$LESS_SPACES}[a-zA-Z0-9_-]+:.* ]]; then
 			if [ $IS_REMOVED -eq $FALSE ]; then
@@ -211,7 +215,7 @@ fi
 done < "$PROM_DIR"
 
 if [ $STATE -eq $DURING_JOB ]; then
-	if [ "$OPTION" = "-rm" ]; then
+	if [ "$OPTION" = "$REMOVE_OPTION" ]; then
 		if [ $IS_REMOVED -eq $FALSE ]; then
 			CONTENT=$CONTENT$JOB_CONTENT
 		fi
@@ -219,8 +223,17 @@ if [ $STATE -eq $DURING_JOB ]; then
 fi
 
 if [ $STATE -eq $DURING_SCRAPE ]; then
-	if ["$OPTION" = "-a" ];
+	if [ "$OPTION" = "$ADD_OPTION" ]; then
+		if [ $IS_ADDED -eq $FALSE ]; then
+			JOB_CONTENT=""
+			write_job_content
+			CONTENT=$CONTENT$JOB_CONTENT"\n"
+			IS_ADDED=$TRUE
+			echo "Added Target Successfully"
+		fi
+	fi
+fi
 
-if [ "$OPTION" = "-a" ] || [ "$OPTION" = "-rm" ]; then
+if [ "$OPTION" = "$ADD_OPTION" ] || [ "$OPTION" = "$REMOVE_OPTION" ]; then
 	printf "$CONTENT" > "$PROM_DIR"
 fi 

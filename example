@@ -1,11 +1,20 @@
 #!/bin/bash
-IFS='%'
-NUM_SPACES=2
-JOB_NAME="example"
-line="  - job_name: 'example' #"
-if [[ $line =~ ^[[:space:]]{$NUM_SPACES}-[[:space:]]+job_name:[[:space:]]+[\'\"]$JOB_NAME[\'\"].*$ ]]; then
-	echo "Yup Matches It"
-else
-	echo "Does not"
-fi
-unset IFS 
+#IFS='%'
+#NUM_SPACES=2
+#JOB_NAME="example"
+#line="  - job_name: 'example' #"
+#if [[ $line =~ ^[[:space:]]{$NUM_SPACES}-[[:space:]]+job_name:[[:space:]]+[\'\"]$JOB_NAME[\'\"].*$ ]]; then
+#	echo "Yup Matches It"
+#else
+#	echo "Does not"
+#fi
+#unset IFS 
+declare -A my_array
+declare -A hello
+hello=([hello]=world)
+my_array=([foo]="hello" [bar]=value)
+for i in "${my_array[@]}";
+do
+	echo $i
+done
+
