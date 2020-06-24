@@ -58,20 +58,24 @@ elif [ $# -gt 0 ]; then
 			echo "Enter a prometheus.yml file that exists"
 			exit
 		fi
-		if [[ ! $3 =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+		if [[ ! $3 =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
+			echo "Enter a valid server name"
+			exit
+		fi
+		if [[ ! $4 =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
 			echo "Enter a valid ip address"
 			exit
 		fi
 		PROM_DIR="$2"
-		IP1="$3"
+		IP1="$4"
 		TARGET="- targets: ['$IP1:9100','$IP1:7676','$IP1:9256','$IP1:9399','$IP1:9104'"
-		if [ $# -eq 4 ] && [[ $4 =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
-			IP2="$4"
+		if [ $# -eq 5 ] && [[ $4 =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+			IP2="$5"
 			TARGET=$TARGET",'$IP2:9100','$IP2:9256','$IP2:7676','$IP2:9399','$IP2:9104']"
 		else
 			TARGET=$TARGET"]"
 		fi
-		JOB_NAME="ems_$IP1"
+		JOB_NAME="$3"
 	elif [ $1 = "$REMOVE_OPTION" ]; then
 		if [ ! -f "$2" ]; then
 			echo "Enter a prometheus.yml file that exists"
