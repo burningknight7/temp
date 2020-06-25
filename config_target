@@ -7,6 +7,8 @@ HELP_OPTION="-h"
 TRUE=1
 FALSE=0
 IS_REMOVED=$FALSE
+IS_JOB_PRESENT=$FALSE
+ALREADY_ADDED=$FALSE
 IS_ADDED=$FALSE
 BEFORE_SCRAPE=0
 DURING_SCRAPE=1
@@ -22,6 +24,7 @@ HELP_MSG="use $HELP_OPTION option to get a guide on how to use config_target"
 TARGET=""
 STATE=$BEFORE_SCRAPE
 CONTENT=""
+CONTENT_AFTER=""
 JOB_CONTENT=""
 JOB_SPACES=""
 NUM_SPACES=0
@@ -116,6 +119,7 @@ if [ $STATE -eq $BEFORE_SCRAPE ]; then
 elif [ $STATE -eq $DURING_SCRAPE ]; then
 	if [ "$OPTION" = "$ADD_OPTION" ]; then
 		if [[ $line =~ ^[[:space:]]+-[[:space:]]+[a-zA-Z0-9_]+:.*$ ]]; then
+			IS_JOB_PRESENT=$TRUE
 			NUM_SPACES=`expr index "$line" "-"`
 			NUM_SPACES=$((NUM_SPACES - 1))
 			JOB_SPACES=""
@@ -123,28 +127,27 @@ elif [ $STATE -eq $DURING_SCRAPE ]; then
 			do
 				JOB_SPACES=$JOB_SPACES" "
 			done
-			JOB_CONTENT=""
-			write_job_content
-			CONTENT=$CONTENT$JOB_CONTENT$line"\n"			
-			STATE=$BEFORE_SCRAPE
-			IS_ADDED=$TRUE
-			echo "Added the Target Successfully"
+			STATE=$DURING_JOB
+			CONTENT_AFTER=$CONTENT_AFTER$line"\n"
 			
 		elif [[ $line =~ ^[[:space:]]{0,$NUM_SPACES}[a-zA-Z0-9_].*$ ]]; then
-			if [ $IS_ADDED -eq $FALSE ]; then
+			if [ $IS_ADDED -eq $FALSE ] || [ $ALREADY_ADDED -eq $FALSE ]; then
 				JOB_CONTENT=""
-				JOB_SPACES=$JOB_SPACES"  "
+				if [ $IS_JOB_PRESENT -eq $FALSE ]; then
+					JOB_SPACES=$JOB_SPACES"  "
+				fi
 				write_job_content
-				CONTENT=$CONTENT$JOB_CONTENT$line"\n"
+				CONTENT=$CONTENT$JOB_CONTENT$CONTENT_AFTER$line"\n"
 				IS_ADDED=$TRUE
 				echo "Added Target Successfully"
 				
 				STATE=$BEFORE_SCRAPE
 			else
-				CONTENT=$CONTENT$line"\n"
+				CONTENT=$CONTENT$CONTENT_AFTER$line"\n"
+				STATE=$BEFORE_SCRAPE
 			fi
 		else
-			CONTENT=$CONTENT$line"\n"
+			CONTENT_AFTER=$CONTENT_AFTER$line"\n"
 		fi
 	elif [ "$OPTION" = "$REMOVE_OPTION" ]; then
 		if [[ $line =~ ^[[:space:]]+-[[:space:]]+[a-zA-Z0-9_]+:.*$ ]]; then
@@ -172,7 +175,28 @@ elif [ $STATE -eq $DURING_SCRAPE ]; then
 		fi
 	fi
 elif [ $STATE -eq $DURING_TARGET ]; then
-	if [ $OPTION = "$LIST_OPTION" ]; then
+	if [ "$OPTION" = "$ADD_OPTION" ]; then
+		if [[ $line == *"]"* ]]; then
+			if [[ $line == *"$IP1"* ]] || [ ! "$IP2" = "" ] && [[ $line == *"$IP2"* ]]; then
+				ALREADY_ADDED=$TRUE
+				CONTENT=$CONTENT$CONTENT_AFTER$line"\n"
+				echo "Target already exists"
+				STATE=$BEFORE_SCRAPE
+			else
+				CONTENT_AFTER=$CONTENT_AFTER$line"\n"
+				STATE=$DURING_SCRAPE
+			fi
+		else
+			if [[ $line == *"$IP1"* ]] || [ ! "$IP2" = "" ] && [[ $line == *"$IP2"* ]]; then
+				ALREADY_ADDED=$TRUE
+				CONTENT=$CONTENT$CONTENT_AFTER$line"\n"
+				echo "Target already exists"
+				STATE=$BEFORE_SCRAPE
+			else
+				CONTENT_AFTER=$CONTENT_AFTER$line"\n"
+			fi		
+		fi
+	elif [ $OPTION = "$LIST_OPTION" ]; then
 		if [[ $line == *"]"* ]]; then
 			echo $line
 			echo ""
@@ -183,7 +207,24 @@ elif [ $STATE -eq $DURING_TARGET ]; then
 	fi
 
 elif [ $STATE -eq $DURING_JOB ]; then
-	if [ $OPTION = "$REMOVE_OPTION" ]; then
+	if [ "$OPTION" = "$ADD_OPTION" ]; then
+		if [[ $line =~ ^[[:space:]-]+targets:.*$ ]]; then
+			if [[ $line == *"$IP1"* ]] || [ ! "$IP2" = "" ] && [[ $line == *"$IP2"* ]]; then 
+				ALREADY_ADDED=$TRUE
+				CONTENT=$CONTENT$CONTENT_AFTER$line"\n"
+				echo "Target already exists"
+				STATE=$BEFORE_SCRAPE
+			elif [[ $line == *"]"* ]]; then
+				CONTENT_AFTER=$CONTENT_AFTER$line"\n"
+				STATE=$DURING_SCRAPE
+			else
+				CONTENT_AFTER=$CONTENT_AFTER$line"\n"
+				STATE=$DURING_TARGET
+			fi
+		else
+			CONTENT_AFTER=$CONTENT_AFTER$line"\n"
+		fi		
+	elif [ $OPTION = "$REMOVE_OPTION" ]; then
 		LESS_SPACES=$(($NUM_SPACES - 1))
 		if [[ $line =~ ^[[:space:]]{0,$LESS_SPACES}[a-zA-Z0-9_-]+:.* ]]; then
 			if [ $IS_REMOVED -eq $FALSE ]; then
@@ -228,13 +269,17 @@ fi
 
 if [ $STATE -eq $DURING_SCRAPE ]; then
 	if [ "$OPTION" = "$ADD_OPTION" ]; then
-		if [ $IS_ADDED -eq $FALSE ]; then
-			JOB_CONTENT=""
-			write_job_content
-			CONTENT=$CONTENT$JOB_CONTENT"\n"
-			IS_ADDED=$TRUE
-			echo "Added Target Successfully"
-		fi
+		if [ $ALREADY_ADDED -eq $TRUE ]; then
+			echo "Target already exists"
+			CONTENT=$CONTENT$CONTENT_AFTER
+		else
+			if [ $IS_ADDED -eq $FALSE ]; then
+				JOB_CONTENT=""
+				write_job_content
+				CONTENT=$CONTENT$JOB_CONTENT$CONTENT_AFTER
+				echo "Added Target Successfully"
+			fi
+		fi				
 	fi
 fi
 

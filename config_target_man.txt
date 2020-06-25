@@ -5,7 +5,7 @@ Description: Adds the required targets to the Prometheus.yml config file
 OPTIONS :
 
 -a yml_location server_name ip1 [ip2]
-Appends a new target with a unique name, with the IP address of ip1 to the prometheus.yml file located at the directory ‘yml_location’. For HA provide two IP addresses of master and slave respectively. Gives a prompt of "Added Target Successfully" if target gets added, otherwise no prompt is given.
+Appends a new target with a unique name, with the IP address of ip1 to the prometheus.yml file located at the directory ‘yml_location’. For HA provide two IP addresses of master and slave respectively. Gives a prompt of "Added Target Successfully" if target gets added, otherwise no prompt is given. Also prevents you from adding an IP address that already is a target for another job.
 
 -r yml_location job_name
 Removes the node with the given job_name from prometheus.yml at the ‘yml_location’ file. Gives a prompt of "Removed Target Successfully" if target was removed, otherwise no prompt is given.
